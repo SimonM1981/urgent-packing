@@ -3,18 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>URGENT PACKING</title>
+  <title>URGENT PACKING SYSTEM</title>
   <style>
-    body { background:#0a0a0a; color:white; font-family:Arial; padding:20px; margin:0; }
-    table { width:100%; border-collapse:collapse; background:#1f1f1f; }
-    th, td { padding:12px; border:1px solid #444; }
-    th { background:#222; }
-    tr:hover { background:#292929; }
-    button { background:#22c55e; color:black; padding:10px 16px; border:none; border-radius:8px; font-weight:bold; }
+    body { background: #0a0a0a; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; margin: 0; }
+    h1 { color: #ef4444; text-align: center; text-transform: uppercase; letter-spacing: 2px; }
+    
+    table { width: 100%; border-collapse: collapse; background: #1f1f1f; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    th, td { padding: 14px; border: 1px solid #333; text-align: left; }
+    th { background: #111; color: #aaa; font-size: 0.85rem; text-transform: uppercase; }
+    tr:hover { background: #252525; }
+    
+    .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
+    .st-urgent { background: #7f1d1d; color: #fca5a5; }
+    .st-laser { background: #7c2d12; color: #fdba74; }
+    .st-packing { background: #14532d; color: #86efac; }
+    
+    button { 
+      background: #22c55e; color: #000; padding: 10px 16px; border: none; 
+      border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; 
+    }
+    button:hover { background: #4ade80; transform: translateY(-1px); }
+    button:disabled { background: #444; cursor: not-allowed; }
+    
+    .loading-row { opacity: 0.5; pointer-events: none; }
   </style>
 </head>
 <body>
-  <h1 style="color:#ef4444; text-align:center;">🚨 URGENT PACKING</h1>
+
+  <h1>🚨 URGENT PACKING</h1>
 
   <table>
     <thead>
@@ -22,52 +38,97 @@
         <th>P/I No.</th>
         <th>PARTS No.</th>
         <th>CUSTOMER</th>
-        <th>Q'TY</th>
-        <th>TEAM</th>
-        <th>STATUS</th>
-        <th>ACTION</th>
+        <th style="text-align:center">Q'TY</th>
+        <th style="text-align:center">TEAM</th>
+        <th style="text-align:center">STATUS</th>
+        <th style="text-align:center">ACTION</th>
       </tr>
     </thead>
-    <tbody id="data"></tbody>
+    <tbody id="data-container">
+      <tr><td colspan="7" style="text-align:center">Loading data...</td></tr>
+    </tbody>
   </table>
 
   <script>
-    const URL = "https://script.google.com/macros/s/AKfycbxK-VVvzX92Bc24X-PHYOe1TKjah9c3ICqsYZzOl-TzWRUJDbQFYySBM7uyev9NqQuf/exec";
+    // REPLACE THIS WITH YOUR NEW DEPLOYMENT URL
+    const API_URL = "https://script.google.com/macros/s/AKfycbxK-VVvzX92Bc24X-PHYOe1TKjah9c3ICqsYZzOl-TzWRUJDbQFYySBM7uyev9NqQuf/exec";
 
-    async function load() {
-      const res = await fetch(URL + "?method=GET");
-      const jobs = await res.json();
+    async function loadData() {
+      try {
+        const response = await fetch(`${API_URL}?action=get`); // Using action=get for clarity
+        const jobs = await response.json();
+        renderTable(jobs);
+      } catch (err) {
+        console.error("Load failed:", err);
+      }
+    }
+
+    function renderTable(jobs) {
       let html = "";
       jobs.forEach(job => {
-        const st = (job.Status || "urgent").toLowerCase();
-        let btn = "";
-        if (st === "urgent") btn = `<button onclick="go('${job.ID || job.id}', 'laser')">→ Send to Laser</button>`;
-        else if (st === "laser") btn = `<button onclick="go('${job.ID || job.id}', 'packing')">→ Under Packing</button>`;
-        else if (st === "packing") btn = `<button onclick="go('${job.ID || job.id}', 'packed')">→ Packed</button>`;
-        else btn = "Done";
+        const rawStatus = (job.Status || "urgent").toLowerCase();
+        let actionBtn = "";
 
-        html += `<tr>
-          <td>${job['P/I No.']||''}</td>
-          <td><b>${job['PARTS No.']||''}</b></td>
-          <td>${job['CUSTOMER No.']||''}</td>
-          <td style="text-align:center">${job["Q'TY"]||''}</td>
-          <td style="text-align:center">${job.Team||''}</td>
-          <td style="text-align:center">${st.toUpperCase()}</td>
-          <td style="text-align:center">${btn}</td>
-        </tr>`;
+        // Logic for Department Transitions
+        if (rawStatus === "urgent") {
+          actionBtn = `<button onclick="updateStatus('${job.ID}', 'laser')">→ Send to Laser</button>`;
+        } else if (rawStatus === "laser") {
+          actionBtn = `<button onclick="updateStatus('${job.ID}', 'packing')">→ Start Packing</button>`;
+        } else if (rawStatus === "packing") {
+          actionBtn = `<button onclick="updateStatus('${job.ID}', 'packed')">→ Mark Packed</button>`;
+        } else {
+          actionBtn = "<span style='color:#666'>Completed</span>";
+        }
+
+        html += `
+          <tr id="row-${job.ID}">
+            <td>${job['P/I No.'] || '-'}</td>
+            <td><b style="color:#60a5fa">${job['PARTS No.'] || '-'}</b></td>
+            <td>${job['CUSTOMER No.'] || job['CUSTOMER'] || '-'}</td>
+            <td style="text-align:center">${job["Q'TY"] || 0}</td>
+            <td style="text-align:center">${job.Team || '-'}</td>
+            <td style="text-align:center">
+              <span class="status-badge st-${rawStatus}">${rawStatus.toUpperCase()}</span>
+            </td>
+            <td style="text-align:center">${actionBtn}</td>
+          </tr>`;
       });
-      document.getElementById("data").innerHTML = html;
+      document.getElementById("data-container").innerHTML = html;
     }
 
-    async function go(id, status) {
-      if (!confirm("Move to next step?")) return;
-      await fetch(`${URL}?method=POST&action=update&id=${id}&status=${status}`);
-      alert("✅ Updated!");
-      load();
+    async function updateStatus(id, newStatus) {
+      if (!confirm(`Confirm move to ${newStatus.toUpperCase()}?`)) return;
+
+      const row = document.getElementById(`row-${id}`);
+      if (row) row.classList.add('loading-row');
+
+      try {
+        // We use a simple GET request for the update to avoid CORS redirect issues in GAS
+        const updateUrl = `${API_URL}?action=update&id=${encodeURIComponent(id)}&status=${encodeURIComponent(newStatus)}`;
+        
+        const response = await fetch(updateUrl);
+        const result = await response.json();
+
+        if (result.status === "success") {
+          console.log("Update successful");
+          await loadData(); // Refresh list
+        } else {
+          alert("Error: " + (result.error || "Update failed"));
+          if (row) row.classList.remove('loading-row');
+        }
+      } catch (err) {
+        // Often GAS throws a CORS error even if the data updated. 
+        // We refresh anyway to check.
+        console.log("Check redirect:", err);
+        setTimeout(loadData, 1000);
+      }
     }
 
-    load();
-    setInterval(load, 6000);
+    // Initial Load
+    loadData();
+
+    // Auto-refresh every 30 seconds to keep staff synced
+    setInterval(loadData, 30000);
   </script>
 </body>
 </html>
