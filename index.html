@@ -4,45 +4,64 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>URGENT - Packing</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"></script>
   <style>
-    table { border-collapse: collapse; }
-    th, td { border: 1px solid #374151; }
-    tr:hover { background-color: #1f2937; }
+    :root {
+      --bg: #0a0a0a;
+      --card: #1a1a1a;
+    }
+    body {
+      background: var(--bg);
+      color: white;
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      padding: 16px;
+    }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #333; padding: 14px; text-align: left; }
+    tr:hover { background-color: #222; }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .status-urgent { background: #dc2626; }
+    .status-laser { background: #eab308; }
+    .status-packing { background: #8b5cf6; }
+    .status-packed { background: #16a34a; }
   </style>
 </head>
-<body class="bg-gray-950 text-white min-h-screen">
+<body>
 
-  <div class="max-w-7xl mx-auto p-4">
-    <div class="flex justify-between items-center mb-6 border-b border-red-600 pb-4">
-      <h1 class="text-4xl font-bold text-red-500 flex items-center gap-3">
-        <span class="text-3xl">🚨</span> URGENT PACKING
-      </h1>
-      <div class="text-right">
-        <p class="text-sm text-gray-400">Live from Google Sheet</p>
-        <p id="datetime" class="font-mono text-lg"></p>
+  <div style="max-width: 1400px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #dc2626; padding-bottom: 15px;">
+      <h1 style="font-size: 2.5rem; font-weight: bold; color: #dc2626;">🚨 URGENT PACKING</h1>
+      <div style="text-align: right;">
+        <p style="color: #888;">Live from Google Sheet</p>
+        <p id="datetime" style="font-family: monospace; font-size: 1.1rem;"></p>
       </div>
     </div>
 
-    <!-- Team Filter -->
-    <div class="flex gap-2 mb-6 flex-wrap" id="teamFilters"></div>
+    <!-- Team Filters -->
+    <div id="teamFilters" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
 
-    <!-- Main Table -->
-    <div class="overflow-x-auto bg-gray-900 rounded-2xl shadow-2xl">
-      <table class="w-full text-sm">
+    <!-- Table -->
+    <div style="background: #1a1a1a; border-radius: 16px; overflow: auto;">
+      <table>
         <thead>
-          <tr class="bg-gray-800">
-            <th class="p-4 text-left">P/I No.</th>
-            <th class="p-4 text-left">PARTS No.</th>
-            <th class="p-4 text-left">CUSTOMER No.</th>
-            <th class="p-4 text-center">Q'TY</th>
-            <th class="p-4 text-center">TEAM</th>
-            <th class="p-4 text-center">CURRENT STATUS</th>
-            <th class="p-4 text-center">NEXT ACTION</th>
+          <tr style="background: #222;">
+            <th>P/I No.</th>
+            <th>PARTS No.</th>
+            <th>CUSTOMER No.</th>
+            <th style="text-align:center">Q'TY</th>
+            <th style="text-align:center">TEAM</th>
+            <th style="text-align:center">CURRENT STATUS</th>
+            <th style="text-align:center">NEXT ACTION</th>
           </tr>
         </thead>
-        <tbody id="tableBody" class="text-gray-300"></tbody>
+        <tbody id="tableBody"></tbody>
       </table>
     </div>
   </div>
@@ -51,10 +70,10 @@
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxK-VVvzX92Bc24X-PHYOe1TKjah9c3ICqsYZzOl-TzWRUJDbQFYySBM7uyev9NqQuf/exec";
 
     const steps = [
-      { id: 'urgent', name: 'Urgent', color: 'bg-red-600' },
-      { id: 'laser', name: 'Send to Laser', color: 'bg-yellow-600' },
-      { id: 'packing', name: 'Under Packing', color: 'bg-purple-600' },
-      { id: 'packed', name: 'Packed', color: 'bg-green-600' }
+      { id: 'urgent', name: 'Urgent', class: 'status-urgent' },
+      { id: 'laser', name: 'Send to Laser', class: 'status-laser' },
+      { id: 'packing', name: 'Under Packing', class: 'status-packing' },
+      { id: 'packed', name: 'Packed', class: 'status-packed' }
     ];
 
     let jobs = [];
@@ -68,16 +87,16 @@
         renderTeamFilters();
       } catch (e) {
         console.error(e);
-        alert("Cannot connect to Google Sheet. Please check your internet.");
+        alert("Cannot connect to Google Sheet. Check internet.");
       }
     }
 
     function renderTeamFilters() {
       const container = document.getElementById('teamFilters');
-      let html = `<button onclick="filterByTeam('all')" class="px-6 py-3 rounded-xl font-bold ${currentFilter==='all' ? 'bg-red-600' : 'bg-gray-700'}">ALL TEAMS</button>`;
+      let html = `<button onclick="filterByTeam('all')" class="btn" style="background:${currentFilter==='all'?'#dc2626':'#333'}">ALL TEAMS</button>`;
       
       ['A','B','C','D','E','F','G','H'].forEach(team => {
-        html += `<button onclick="filterByTeam('${team}')" class="px-6 py-3 rounded-xl font-bold ${currentFilter===team ? 'bg-red-600' : 'bg-gray-700'}">TEAM ${team}</button>`;
+        html += `<button onclick="filterByTeam('${team}')" class="btn" style="background:${currentFilter===team?'#dc2626':'#333'}">TEAM ${team}</button>`;
       });
       container.innerHTML = html;
     }
@@ -92,38 +111,37 @@
       const tbody = document.getElementById('tableBody');
       tbody.innerHTML = '';
 
-      let filteredJobs = jobs;
+      let filtered = jobs;
       if (currentFilter !== 'all') {
-        filteredJobs = jobs.filter(j => (j.Team || j.team) === currentFilter);
+        filtered = jobs.filter(j => (j.Team || j.team) === currentFilter);
       }
 
-      filteredJobs.forEach(job => {
+      filtered.forEach(job => {
         const status = (job.Status || job.status || 'urgent').toString().toLowerCase().trim();
         const stepIndex = steps.findIndex(s => s.id === status);
         const nextStep = stepIndex < 3 ? steps[stepIndex + 1] : null;
 
         const row = document.createElement('tr');
-        row.className = "border-b border-gray-700 hover:bg-gray-800";
         row.innerHTML = `
-          <td class="p-4 font-mono">${job['P/I No.'] || ''}</td>
-          <td class="p-4 font-bold">${job['PARTS No.'] || ''}</td>
-          <td class="p-4">${job['CUSTOMER No.'] || ''}</td>
-          <td class="p-4 text-center font-bold">${job["Q'TY"] || job.qty || ''}</td>
-          <td class="p-4 text-center">
-            <span class="px-4 py-1.5 bg-gray-700 rounded-full text-xs font-medium">${job.Team || job.team || '—'}</span>
+          <td style="font-family:monospace">${job['P/I No.'] || ''}</td>
+          <td style="font-weight:bold">${job['PARTS No.'] || ''}</td>
+          <td>${job['CUSTOMER No.'] || ''}</td>
+          <td style="text-align:center; font-weight:bold">${job["Q'TY"] || job.qty || ''}</td>
+          <td style="text-align:center">
+            <span style="background:#333; padding:4px 12px; border-radius:9999px; font-size:0.85rem">${job.Team || job.team || '—'}</span>
           </td>
-          <td class="p-4 text-center">
-            <span class="px-6 py-2 rounded-xl text-white text-sm font-bold ${steps[stepIndex].color}">
+          <td style="text-align:center">
+            <span class="${steps[stepIndex].class}" style="padding:8px 20px; border-radius:9999px; color:white; font-weight:bold">
               ${steps[stepIndex].name}
             </span>
           </td>
-          <td class="p-4 text-center">
+          <td style="text-align:center">
             ${nextStep ? `
               <button onclick="moveToStep('${job.ID || job.id}', '${nextStep.id}')" 
-                      class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-xl text-sm font-bold transition-all">
+                      style="background:#16a34a; color:white; padding:10px 20px; border-radius:12px; font-weight:bold; border:none; cursor:pointer;">
                 → ${nextStep.name}
               </button>
-            ` : `<span class="text-green-400 font-bold">✓ COMPLETED</span>`}
+            ` : `<span style="color:#4ade80; font-weight:bold">✓ COMPLETED</span>`}
           </td>
         `;
         tbody.appendChild(row);
@@ -131,7 +149,7 @@
     }
 
     async function moveToStep(jobId, newStatus) {
-      if (!confirm(`Move this job to "${steps.find(s => s.id === newStatus).name}"?`)) return;
+      if (!confirm(`Move to "${steps.find(s => s.id === newStatus).name}"?`)) return;
 
       try {
         await fetch(WEB_APP_URL, {
@@ -143,24 +161,22 @@
             lastNote: `Moved to ${newStatus}`
           })
         });
-        
-        fetchJobs(); // Refresh immediately
+        fetchJobs();
       } catch (e) {
-        alert("Failed to update status. Please try again.");
+        alert("Update failed. Please check connection.");
       }
     }
 
-    // Auto refresh every 6 seconds
+    // Auto refresh
     setInterval(fetchJobs, 6000);
 
-    // Live Clock
+    // Clock
     setInterval(() => {
       document.getElementById('datetime').textContent = new Date().toLocaleString('en-US', {
         weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
       });
     }, 1000);
 
-    // Initial Load
     fetchJobs();
   </script>
 </body>
