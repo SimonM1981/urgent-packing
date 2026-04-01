@@ -48,7 +48,7 @@
   </div>
 
   <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyBFG1h8s7WytKNsOOk_WEmFx0rBkG6CW1aQSJ8UivvTtzWgEzWsKupVhhMPWwz0ZFx/exec";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxK-VVvzX92Bc24X-PHYOe1TKjah9c3ICqsYZzOl-TzWRUJDbQFYySBM7uyev9NqQuf/exec";
 
     const steps = [
       { id: 'urgent', name: 'Urgent', color: 'bg-red-600' },
@@ -68,7 +68,7 @@
         renderTeamFilters();
       } catch (e) {
         console.error(e);
-        alert("Cannot connect to Google Sheet. Please check internet.");
+        alert("Cannot connect to Google Sheet. Please check your internet.");
       }
     }
 
@@ -144,8 +144,7 @@
           })
         });
         
-        // Refresh immediately
-        fetchJobs();
+        fetchJobs(); // Refresh immediately
       } catch (e) {
         alert("Failed to update status. Please try again.");
       }
