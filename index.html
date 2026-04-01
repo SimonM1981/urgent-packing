@@ -5,34 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>URGENT PACKING A-H</title>
   <style>
-    body { background:#0a0a0a; color:white; font-family:Arial, sans-serif; padding:10px; margin:0; padding-bottom: 100px; }
+    body { background:#0a0a0a; color:white; font-family:Arial, sans-serif; padding:10px; margin:0; padding-bottom: 110px; }
+    .header-ctrl { background: #111; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #333; }
+    .date-input { width: 100%; padding: 10px; background: #222; border: 1px solid #444; color: white; border-radius: 5px; font-size: 16px; }
     
-    .header-ctrl { background: #111; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
-    .date-input { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: white; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
-    
-    /* Scrollable Team Nav */
-    .nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #111; display: flex; overflow-x: auto; border-top: 1px solid #333; z-index: 100; scroll-behavior: smooth; }
-    .nav button { flex: 0 0 70px; padding: 18px 5px; border: none; background: transparent; color: #666; font-weight: bold; cursor: pointer; font-size: 11px; text-align: center; }
-    .nav button.active { color: #22c55e; border-bottom: 4px solid #22c55e; background: #1a1a1a; }
+    .nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #111; display: flex; overflow-x: auto; border-top: 1px solid #333; z-index: 100; }
+    .nav button { flex: 0 0 65px; padding: 15px 5px; border: none; background: transparent; color: #666; font-weight: bold; cursor: pointer; font-size: 11px; }
+    .nav button.active { color: #22c55e; border-bottom: 3px solid #22c55e; background: #1a1a1a; }
 
     table { width:100%; border-collapse:collapse; background:#151515; font-size: 11px; }
-    th, td { padding: 10px 6px; border: 1px solid #222; text-align:left; vertical-align: middle; }
+    th, td { padding: 10px 5px; border: 1px solid #222; text-align:left; }
     th { background:#111; color:#555; text-transform:uppercase; font-size:9px; }
     
-    .btn-action { background:#22c55e; color:black; padding:10px 4px; border:none; border-radius:4px; font-weight:bold; width:100%; cursor:pointer; font-size: 10px; }
-    .status-tag { padding:3px; border-radius:3px; font-size:8px; font-weight:bold; display:block; text-align:center; text-transform:uppercase; }
-    .urgent { background:#7f1d1d; color: #fca5a5; } 
-    .laser { background:#92400e; color: #fcd34d; } 
-    .packing { background:#1e40af; color: #bfdbfe; } 
-    .packed { background:#065f46; color: #a7f3d0; }
+    .btn-action { background:#22c55e; color:black; padding:8px 2px; border:none; border-radius:4px; font-weight:bold; width:100%; cursor:pointer; font-size: 10px; }
+    .status-tag { padding:3px; border-radius:3px; font-size:8px; font-weight:bold; display:block; text-align:center; text-transform:uppercase; margin-bottom:4px; }
+    .urgent { background:#7f1d1d; color:#fca5a5; } .laser { background:#92400e; color:#fcd34d; } 
+    .packing { background:#1e40af; color:#bfdbfe; } .packed { background:#065f46; color:#a7f3d0; }
   </style>
 </head>
 <body>
 
   <div class="header-ctrl">
-    <label style="font-size: 10px; color: #888; display: block; margin-bottom: 5px;">SELECT DATE:</label>
     <input type="date" id="dateFilter" class="date-input" onchange="render()">
-    <p style="margin: 10px 0 0 0; font-size: 14px;">VIEWING: <span id="current-team-label" style="color: #22c55e; font-weight: bold;">ALL TEAMS</span></p>
+    <p style="margin: 8px 0 0 0; font-size: 13px;">TEAM: <span id="current-team-label" style="color:#22c55e; font-weight:bold;">ALL</span></p>
   </div>
 
   <table>
@@ -40,15 +35,12 @@
       <tr>
         <th>P/I NO.</th>
         <th>PARTS / CUSTOMER</th>
-        <th style="text-align:center">QTY</th>
         <th style="text-align:center">TEAM</th>
         <th style="text-align:center">STATUS</th>
         <th>ACTION</th>
       </tr>
     </thead>
-    <tbody id="table-body">
-      <tr><td colspan="6" style="text-align:center; padding: 30px;">Loading Database...</td></tr>
-    </tbody>
+    <tbody id="table-body"></tbody>
   </table>
 
   <div class="nav">
@@ -65,11 +57,8 @@
 
   <script>
     const URL = "https://script.google.com/macros/s/AKfycbzLICg8R6pwS62NkB5Nr4WSnxzatNpbDZTnnPR4FTulzqHia0QzKpS0WYgkCukBmaSw/exec";
-    
     let allData = [];
     let currentTeam = 'ALL';
-
-    // Default to today
     document.getElementById('dateFilter').valueAsDate = new Date();
 
     async function load() {
@@ -77,47 +66,32 @@
         const res = await fetch(URL);
         allData = await res.json();
         render();
-      } catch (e) { 
-        document.getElementById("table-body").innerHTML = "<tr><td colspan='6' style='text-align:center; color:red;'>Connection Error</td></tr>";
-      }
+      } catch (e) { console.error("Error"); }
     }
 
     function filterTeam(team) {
       currentTeam = team;
       document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
       document.getElementById('btn-' + team).classList.add('active');
-      document.getElementById('current-team-label').innerText = (team === 'ALL' ? 'ALL TEAMS' : 'TEAM ' + team);
+      document.getElementById('current-team-label').innerText = team;
       render();
     }
 
     function render() {
       const selectedDate = document.getElementById('dateFilter').value;
+      const filtered = allData.filter(j => (currentTeam === 'ALL' || j.team == currentTeam) && j.displayDate === selectedDate);
       let html = "";
-      
-      const filtered = allData.filter(j => {
-        const matchTeam = (currentTeam === 'ALL' || j.team == currentTeam);
-        const matchDate = (j.displayDate === selectedDate);
-        return matchTeam && matchDate;
-      });
 
       if (filtered.length === 0) {
-        html = `<tr><td colspan="6" style="text-align:center; padding: 30px; color: #555;">No records for this date/team.</td></tr>`;
+        html = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#444;">No data found.</td></tr>`;
       } else {
         filtered.forEach(job => {
           const st = (job.status || "Urgent").toLowerCase();
-          let btn = "";
-          if (st === "urgent") btn = `<button class="btn-action" onclick="update('${job.rawId}', 'laser')">LASER</button>`;
-          else if (st === "laser") btn = `<button class="btn-action" onclick="update('${job.rawId}', 'packing')">PACKING</button>`;
-          else if (st === "packing") btn = `<button class="btn-action" onclick="update('${job.rawId}', 'packed')">DONE</button>`;
-          else btn = "<div style='text-align:center;'>✅</div>";
+          let btn = (st === "packed") ? "✅" : `<button class="btn-action" onclick="update('${job.rawId}', '${st === 'urgent' ? 'laser' : st === 'laser' ? 'packing' : 'packed'}')">NEXT</button>`;
 
           html += `<tr>
             <td>${job.pi}</td>
-            <td>
-              <b style="color:#60a5fa">${job.parts}</b><br>
-              <span style="color:#888; font-size:10px;">${job.customer || '-'}</span>
-            </td>
-            <td style="text-align:center">${job.qty}</td>
+            <td><b style="color:#60a5fa">${job.parts}</b><br><span style="color:#888; font-size:10px">${job.customer}</span></td>
             <td style="text-align:center; font-weight:bold; color:#fbbf24">${job.team}</td>
             <td><span class="status-tag ${st}">${st}</span></td>
             <td>${btn}</td>
@@ -128,7 +102,7 @@
     }
 
     async function update(id, nextStatus) {
-      if (!confirm("Confirm " + nextStatus.toUpperCase() + "?")) return;
+      if (!confirm("Move to " + nextStatus.toUpperCase() + "?")) return;
       try {
         await fetch(`${URL}?action=update&id=${id}&status=${nextStatus}`);
         load();
