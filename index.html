@@ -6,10 +6,7 @@
   <title>URGENT - Packing</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"></script>
   <style>
-    :root {
-      --bg: #0a0a0a;
-      --card: #1a1a1a;
-    }
+    :root { --bg: #0a0a0a; --card: #1a1a1a; }
     body {
       background: var(--bg);
       color: white;
@@ -20,17 +17,7 @@
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #333; padding: 14px; text-align: left; }
     tr:hover { background-color: #222; }
-    .btn {
-      padding: 10px 20px;
-      border-radius: 12px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .status-urgent { background: #dc2626; }
-    .status-laser { background: #eab308; }
-    .status-packing { background: #8b5cf6; }
-    .status-packed { background: #16a34a; }
+    .btn { padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -39,15 +26,13 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #dc2626; padding-bottom: 15px;">
       <h1 style="font-size: 2.5rem; font-weight: bold; color: #dc2626;">🚨 URGENT PACKING</h1>
       <div style="text-align: right;">
-        <p style="color: #888;">Live from Google Sheet</p>
-        <p id="datetime" style="font-family: monospace; font-size: 1.1rem;"></p>
+        <p style="color: #888;">Live from Google Sheet - Debug Mode</p>
+        <p id="datetime" style="font-family: monospace;"></p>
       </div>
     </div>
 
-    <!-- Team Filters -->
     <div id="teamFilters" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
 
-    <!-- Table -->
     <div style="background: #1a1a1a; border-radius: 16px; overflow: auto;">
       <table>
         <thead>
@@ -70,33 +55,35 @@
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxK-VVvzX92Bc24X-PHYOe1TKjah9c3ICqsYZzOl-TzWRUJDbQFYySBM7uyev9NqQuf/exec";
 
     const steps = [
-      { id: 'urgent', name: 'Urgent', class: 'status-urgent' },
-      { id: 'laser', name: 'Send to Laser', class: 'status-laser' },
-      { id: 'packing', name: 'Under Packing', class: 'status-packing' },
-      { id: 'packed', name: 'Packed', class: 'status-packed' }
+      { id: 'urgent', name: 'Urgent' },
+      { id: 'laser', name: 'Send to Laser' },
+      { id: 'packing', name: 'Under Packing' },
+      { id: 'packed', name: 'Packed' }
     ];
 
     let jobs = [];
     let currentFilter = 'all';
 
     async function fetchJobs() {
+      console.log("Fetching jobs...");
       try {
         const res = await fetch(`${WEB_APP_URL}?method=GET`);
-        jobs = await res.json();
+        const text = await res.text();
+        console.log("Response received:", text);
+        jobs = JSON.parse(text);
         renderTable();
         renderTeamFilters();
       } catch (e) {
-        console.error(e);
-        alert("Cannot connect to Google Sheet. Check internet.");
+        console.error("Fetch error:", e);
+        alert("Cannot load data from Google Sheet.");
       }
     }
 
     function renderTeamFilters() {
       const container = document.getElementById('teamFilters');
-      let html = `<button onclick="filterByTeam('all')" class="btn" style="background:${currentFilter==='all'?'#dc2626':'#333'}">ALL TEAMS</button>`;
-      
-      ['A','B','C','D','E','F','G','H'].forEach(team => {
-        html += `<button onclick="filterByTeam('${team}')" class="btn" style="background:${currentFilter===team?'#dc2626':'#333'}">TEAM ${team}</button>`;
+      let html = `<button onclick="filterByTeam('all')" class="btn" style="background:${currentFilter==='all'?'#dc2626':'#444'}">ALL TEAMS</button>`;
+      ['A','B','C','D','E','F','G','H'].forEach(t => {
+        html += `<button onclick="filterByTeam('${t}')" class="btn" style="background:${currentFilter===t?'#dc2626':'#444'}">TEAM ${t}</button>`;
       });
       container.innerHTML = html;
     }
@@ -111,10 +98,7 @@
       const tbody = document.getElementById('tableBody');
       tbody.innerHTML = '';
 
-      let filtered = jobs;
-      if (currentFilter !== 'all') {
-        filtered = jobs.filter(j => (j.Team || j.team) === currentFilter);
-      }
+      let filtered = currentFilter === 'all' ? jobs : jobs.filter(j => (j.Team || j.team) === currentFilter);
 
       filtered.forEach(job => {
         const status = (job.Status || job.status || 'urgent').toString().toLowerCase().trim();
@@ -126,22 +110,11 @@
           <td style="font-family:monospace">${job['P/I No.'] || ''}</td>
           <td style="font-weight:bold">${job['PARTS No.'] || ''}</td>
           <td>${job['CUSTOMER No.'] || ''}</td>
-          <td style="text-align:center; font-weight:bold">${job["Q'TY"] || job.qty || ''}</td>
+          <td style="text-align:center;font-weight:bold">${job["Q'TY"] || ''}</td>
+          <td style="text-align:center">${job.Team || job.team || '—'}</td>
+          <td style="text-align:center">${steps[stepIndex].name}</td>
           <td style="text-align:center">
-            <span style="background:#333; padding:4px 12px; border-radius:9999px; font-size:0.85rem">${job.Team || job.team || '—'}</span>
-          </td>
-          <td style="text-align:center">
-            <span class="${steps[stepIndex].class}" style="padding:8px 20px; border-radius:9999px; color:white; font-weight:bold">
-              ${steps[stepIndex].name}
-            </span>
-          </td>
-          <td style="text-align:center">
-            ${nextStep ? `
-              <button onclick="moveToStep('${job.ID || job.id}', '${nextStep.id}')" 
-                      style="background:#16a34a; color:white; padding:10px 20px; border-radius:12px; font-weight:bold; border:none; cursor:pointer;">
-                → ${nextStep.name}
-              </button>
-            ` : `<span style="color:#4ade80; font-weight:bold">✓ COMPLETED</span>`}
+            ${nextStep ? `<button onclick="moveToStep('${job.ID || job.id}', '${nextStep.id}')" class="btn" style="background:#16a34a">→ ${nextStep.name}</button>` : 'Completed'}
           </td>
         `;
         tbody.appendChild(row);
@@ -149,10 +122,11 @@
     }
 
     async function moveToStep(jobId, newStatus) {
-      if (!confirm(`Move to "${steps.find(s => s.id === newStatus).name}"?`)) return;
+      console.log("Attempting to update Job ID:", jobId, "to", newStatus);
+      if (!confirm(`Move to "${newStatus}"?`)) return;
 
       try {
-        await fetch(WEB_APP_URL, {
+        const response = await fetch(WEB_APP_URL, {
           method: 'POST',
           body: JSON.stringify({
             action: "update",
@@ -161,20 +135,21 @@
             lastNote: `Moved to ${newStatus}`
           })
         });
+
+        const result = await response.text();
+        console.log("Update response:", result);
+
+        alert("Update sent! Refreshing...");
         fetchJobs();
       } catch (e) {
-        alert("Update failed. Please check connection.");
+        console.error("Update error:", e);
+        alert("Update failed. Check console (F12) for details.");
       }
     }
 
-    // Auto refresh
-    setInterval(fetchJobs, 6000);
-
-    // Clock
+    setInterval(fetchJobs, 8000);
     setInterval(() => {
-      document.getElementById('datetime').textContent = new Date().toLocaleString('en-US', {
-        weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-      });
+      document.getElementById('datetime').textContent = new Date().toLocaleString();
     }, 1000);
 
     fetchJobs();
