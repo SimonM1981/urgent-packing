@@ -7,40 +7,47 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
-    .card { transition: all 0.3s; }
-    .card:hover { transform: scale(1.03); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3); }
+    table { border-collapse: collapse; }
+    th, td { border: 1px solid #374151; }
+    tr:hover { background-color: #1f2937; }
   </style>
 </head>
 <body class="bg-gray-950 text-white min-h-screen">
 
   <div class="max-w-7xl mx-auto p-4">
     <div class="flex justify-between items-center mb-6 border-b border-red-600 pb-4">
-      <h1 class="text-4xl font-bold text-red-500 tracking-widest">🚨 URGENT</h1>
+      <h1 class="text-4xl font-bold text-red-500">🚨 URGENT PACKING</h1>
       <div class="text-right">
-        <p class="text-sm text-gray-400">Live from Google Sheet • Add jobs in Sheet</p>
-        <p id="datetime" class="font-mono text-lg"></p>
+        <p class="text-sm text-gray-400">Live Google Sheet • Add jobs in Sheet</p>
+        <p id="datetime" class="font-mono"></p>
       </div>
     </div>
 
-    <div class="flex gap-3 mb-6">
-      <button onclick="refreshData()" class="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-xl font-bold flex items-center gap-2">
-        <i class="fas fa-sync"></i> Refresh Now
-      </button>
+    <!-- Team Filter -->
+    <div class="flex gap-2 mb-6 flex-wrap" id="teamFilters">
+      <button onclick="filterByTeam('all')" class="team-btn active px-5 py-2 rounded-xl bg-red-600 font-bold">ALL TEAMS</button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="board"></div>
-  </div>
+    <!-- Main Table -->
+    <div class="overflow-x-auto bg-gray-900 rounded-2xl">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-800">
+            <th class="p-4 text-left">P/I No.</th>
+            <th class="p-4 text-left">PARTS No.</th>
+            <th class="p-4 text-left">CUSTOMER No.</th>
+            <th class="p-4 text-center">Q'TY</th>
+            <th class="p-4 text-center">TEAM</th>
+            <th class="p-4 text-center">CURRENT STEP</th>
+            <th class="p-4 text-center w-48">CHANGE STEP</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody" class="text-gray-300"></tbody>
+      </table>
+    </div>
 
-  <!-- Move Modal -->
-  <div id="moveModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-    <div class="bg-gray-900 p-8 rounded-2xl w-full max-w-md mx-4">
-      <h3 id="modalTitle" class="text-xl font-bold mb-4"></h3>
-      <textarea id="confirmNote" rows="3" class="w-full p-4 bg-gray-800 rounded-xl text-white" placeholder="Type confirmation note here..."></textarea>
-      
-      <div class="mt-6 flex gap-3">
-        <button onclick="confirmMove()" class="flex-1 bg-green-600 py-4 rounded-xl font-bold">Confirm & Move</button>
-        <button onclick="closeMoveModal()" class="flex-1 bg-gray-700 py-4 rounded-xl font-bold">Cancel</button>
-      </div>
+    <div class="text-center text-xs text-gray-500 mt-6">
+      Add new jobs directly in Google Sheet • Status must start with <strong>urgent</strong>
     </div>
   </div>
 
@@ -48,132 +55,114 @@
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyBFG1h8s7WytKNsOOk_WEmFx0rBkG6CW1aQSJ8UivvTtzWgEzWsKupVhhMPWwz0ZFx/exec";
 
     const steps = [
-      { id: 'urgent', name: 'Urgent', color: 'border-red-500' },
-      { id: 'laser', name: 'Send to Laser', color: 'border-yellow-500' },
-      { id: 'packing', name: 'Under Packing', color: 'border-purple-500' },
-      { id: 'packed', name: 'Packed', color: 'border-green-500' }
+      { id: 'urgent', name: 'Urgent', color: 'bg-red-600' },
+      { id: 'laser', name: 'Send to Laser', color: 'bg-yellow-600' },
+      { id: 'packing', name: 'Under Packing', color: 'bg-purple-600' },
+      { id: 'packed', name: 'Packed', color: 'bg-green-600' }
     ];
 
     let jobs = [];
+    let currentFilter = 'all';
 
     async function fetchJobs() {
       try {
         const res = await fetch(`${WEB_APP_URL}?method=GET`);
-        const text = await res.text();
-        jobs = JSON.parse(text);
-        renderBoard();
+        jobs = await res.json();
+        renderTable();
+        renderTeamFilters();
       } catch (e) {
         console.error(e);
-        alert("Cannot connect to Google Sheet.");
       }
     }
 
-    function renderBoard() {
-      const board = document.getElementById('board');
-      board.innerHTML = '';
-
-      steps.forEach(step => {
-        const columnJobs = jobs.filter(j => {
-          const status = (j.Status || j.status || '').toString().toLowerCase().trim();
-          return status === step.id;
-        });
-
-        const colHTML = `
-          <div class="bg-gray-900 rounded-2xl p-4 border-t-4 ${step.color}">
-            <h2 class="font-bold text-lg mb-4 flex items-center justify-between">
-              ${step.name}
-              <span class="bg-black/50 text-sm px-3 py-1 rounded-full">${columnJobs.length}</span>
-            </h2>
-            <div class="space-y-3 min-h-[400px]" id="col-${step.id}"></div>
-          </div>`;
-
-        board.innerHTML += colHTML;
+    function renderTeamFilters() {
+      const teams = ['A','B','C','D','E','F','G','H'];
+      let html = `<button onclick="filterByTeam('all')" class="team-btn px-5 py-2 rounded-xl font-bold ${currentFilter==='all' ? 'bg-red-600' : 'bg-gray-700'}">ALL TEAMS</button>`;
+      
+      teams.forEach(team => {
+        html += `<button onclick="filterByTeam('${team}')" class="team-btn px-5 py-2 rounded-xl font-bold ${currentFilter===team ? 'bg-red-600' : 'bg-gray-700'}">TEAM ${team}</button>`;
       });
+      document.getElementById('teamFilters').innerHTML = html;
+    }
 
-      steps.forEach(step => {
-        const container = document.getElementById(`col-${step.id}`);
-        const columnJobs = jobs.filter(j => {
-          const status = (j.Status || j.status || '').toString().toLowerCase().trim();
-          return status === step.id;
-        });
+    function filterByTeam(team) {
+      currentFilter = team;
+      renderTeamFilters();
+      renderTable();
+    }
 
-        columnJobs.forEach(job => {
-          const card = document.createElement('div');
-          card.className = `card bg-gray-800 p-5 rounded-2xl cursor-pointer border border-gray-700`;
-          card.innerHTML = `
-            <div class="flex justify-between items-start">
-              <div>
-                <div class="text-red-400 font-mono text-sm">${job['P/I No.'] || ''}</div>
-                <div class="font-bold text-lg">${job['PARTS No.'] || ''}</div>
-              </div>
-              <span class="px-3 py-1 text-xs font-bold bg-gray-700 rounded-full">${job.Team || job.team || '—'}</span>
-            </div>
-            <div class="mt-4 text-sm text-gray-300">
-              Customer: ${job['CUSTOMER No.'] || ''}<br>
-              Q'TY: <strong>${job["Q'TY"] || job.qty || ''}</strong>
-            </div>
-            ${job['Last Note'] || job.lastNote ? `<div class="mt-3 text-xs italic text-gray-400">"${job['Last Note'] || job.lastNote}"</div>` : ''}
-          `;
-          card.onclick = () => openMoveModal(job.ID || job.id, job.Status || job.status);
-          container.appendChild(card);
-        });
+    function renderTable() {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+
+      let filteredJobs = jobs;
+
+      if (currentFilter !== 'all') {
+        filteredJobs = jobs.filter(j => (j.Team || j.team) === currentFilter);
+      }
+
+      filteredJobs.forEach(job => {
+        const currentStatus = (job.Status || job.status || 'urgent').toLowerCase();
+        const stepIndex = steps.findIndex(s => s.id === currentStatus);
+        const nextStep = stepIndex < 3 ? steps[stepIndex + 1] : null;
+
+        const row = document.createElement('tr');
+        row.className = "border-b border-gray-700 hover:bg-gray-800";
+        row.innerHTML = `
+          <td class="p-4 font-mono">${job['P/I No.'] || ''}</td>
+          <td class="p-4 font-bold">${job['PARTS No.'] || ''}</td>
+          <td class="p-4">${job['CUSTOMER No.'] || ''}</td>
+          <td class="p-4 text-center font-bold">${job["Q'TY"] || job.qty || ''}</td>
+          <td class="p-4 text-center">
+            <span class="px-4 py-1 bg-gray-700 rounded-full text-xs font-bold">${job.Team || job.team || '—'}</span>
+          </td>
+          <td class="p-4 text-center">
+            <span class="px-5 py-2 rounded-xl text-white text-xs font-bold ${steps[stepIndex].color}">
+              ${steps[stepIndex].name}
+            </span>
+          </td>
+          <td class="p-4 text-center">
+            ${nextStep ? `
+              <button onclick="changeStep('${job.ID || job.id}', '${nextStep.id}')" 
+                      class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-xl text-sm font-bold">
+                → ${nextStep.name}
+              </button>
+            ` : `<span class="text-green-400 font-bold">DONE</span>`}
+          </td>
+        `;
+        tbody.appendChild(row);
       });
     }
 
-    let currentJobId = null;
-    let nextStatus = null;
-
-    function openMoveModal(jobId, currentStatus) {
-      currentJobId = jobId;
-      const current = (currentStatus || '').toString().toLowerCase().trim();
-      const idx = steps.findIndex(s => s.id === current);
-      
-      if (idx === 3) return alert("This job is already Packed!");
-
-      nextStatus = steps[idx + 1].id;
-      const job = jobs.find(j => (j.ID || j.id) === jobId);
-      
-      document.getElementById('modalTitle').textContent = 
-        `${job['PARTS No.'] || job.partsNo} → ${steps[idx+1].name}`;
-      
-      document.getElementById('moveModal').classList.remove('hidden');
-    }
-
-    function closeMoveModal() {
-      document.getElementById('moveModal').classList.add('hidden');
-      document.getElementById('confirmNote').value = '';
-    }
-
-    async function confirmMove() {
-      const note = document.getElementById('confirmNote').value.trim();
-      if (!note) return alert("Please type a confirmation note!");
+    async function changeStep(jobId, newStatus) {
+      if (!confirm(`Move this job to "${steps.find(s => s.id === newStatus).name}" ?`)) return;
 
       const team = prompt("Enter your Team (A-H):").toUpperCase().trim();
-      if (!"ABCDEFGH".includes(team)) return alert("Team must be A-H only!");
+      if (!"ABCDEFGH".includes(team)) {
+        alert("Team must be A to H");
+        return;
+      }
 
       try {
         await fetch(WEB_APP_URL, {
           method: 'POST',
           body: JSON.stringify({
             action: "update",
-            id: currentJobId,
-            status: nextStatus,
+            id: jobId,
+            status: newStatus,
             team: team,
-            lastNote: note,
-            note: note
+            lastNote: `Moved to ${newStatus}`,
+            note: `Moved by Team ${team}`
           })
         });
-        closeMoveModal();
-        fetchJobs();
+        fetchJobs(); // Refresh
       } catch (e) {
-        alert("Update failed. Try again.");
+        alert("Update failed");
       }
     }
 
-    function refreshData() { fetchJobs(); }
-
-    // Auto refresh every 8 seconds
-    setInterval(fetchJobs, 8000);
+    // Auto refresh every 6 seconds
+    setInterval(fetchJobs, 6000);
 
     // Clock
     setInterval(() => {
