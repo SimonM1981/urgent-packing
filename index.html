@@ -3,86 +3,104 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>URGENT PACKING</title>
+  <title>TEAM PACKING</title>
   <style>
-    body { background:#0a0a0a; color:white; font-family:Arial; padding:20px; }
-    h1 { color:#ef4444; text-align:center; }
-    table { width:100%; border-collapse:collapse; background:#1f1f1f; }
-    th, td { padding:12px; border:1px solid #444; text-align:left; font-size: 14px; }
-    th { background:#222; color:#888; text-transform:uppercase; font-size:11px; }
-    .btn { background:#22c55e; color:black; padding:8px 12px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; }
-    .status-tag { padding:4px 6px; border-radius:4px; font-size:11px; font-weight:bold; text-transform:uppercase;}
-    .urgent { background:#de2121; } .laser { background:#f59e0b; color:000; }
-    .packing { background:#3b82f6; } .packed { background:#10b981; color:000; }
+    body { background:#0a0a0a; color:white; font-family:Arial; padding:10px; margin:0; padding-bottom: 80px; }
+    h1 { color:#ef4444; text-align:center; font-size: 18px; margin: 10px 0; }
+    
+    /* Team Navigation */
+    .nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #1a1a1a; display: flex; border-top: 1px solid #333; }
+    .nav button { flex: 1; padding: 15px; border: none; background: transparent; color: #888; font-weight: bold; cursor: pointer; }
+    .nav button.active { color: #22c55e; border-top: 3px solid #22c55e; background: #222; }
+
+    table { width:100%; border-collapse:collapse; background:#151515; font-size: 12px; }
+    th, td { padding:10px; border:1px solid #222; text-align:left; }
+    th { background:#111; color:#555; text-transform:uppercase; font-size:9px; }
+    
+    .btn-action { background:#22c55e; color:black; padding:8px; border:none; border-radius:4px; font-weight:bold; width:100%; }
+    .status-tag { padding:3px 6px; border-radius:3px; font-size:9px; font-weight:bold; display:block; text-align:center; text-transform:uppercase; }
+    .urgent { background:#7f1d1d; } .laser { background:#92400e; } .packing { background:#1e40af; } .packed { background:#065f46; }
   </style>
 </head>
 <body>
 
-  <h1>🚨 URGENT PACKING</h1>
+  <h1>🚨 URGENT: TEAM <span id="current-team-label">ALL</span></h1>
 
-  <table>
+  <table id="main-table">
     <thead>
       <tr>
-        <th>DATE (Col B)</th>
-        <th>P/I No.</th>
-        <th>PARTS No.</th>
+        <th>P/I NO.</th>
+        <th>PARTS NO.</th>
         <th>QTY</th>
-        <th>TEAM</th>
         <th>STATUS</th>
         <th>ACTION</th>
       </tr>
     </thead>
-    <tbody id="table-body"></tbody>
+    <tbody id="table-body">
+      <tr><td colspan="5" style="text-align:center">Loading...</td></tr>
+    </tbody>
   </table>
 
+  <div class="nav">
+    <button onclick="filterTeam('ALL')" id="btn-ALL" class="active">ALL</button>
+    <button onclick="filterTeam('A')" id="btn-A">TEAM A</button>
+    <button onclick="filterTeam('B')" id="btn-B">TEAM B</button>
+    <button onclick="filterTeam('C')" id="btn-C">TEAM C</button>
+  </div>
+
   <script>
-    const URL = "PASTE_YOUR_NEW_DEPLOYMENT_URL_HERE";
+    const URL = "YOUR_NEW_WEB_APP_URL_HERE";
+    let allData = [];
+    let currentFilter = 'ALL';
 
     async function load() {
-      const res = await fetch(URL);
-      const jobs = await res.json();
-      let html = "";
+      try {
+        const res = await fetch(URL);
+        allData = await res.json();
+        render();
+      } catch (e) {
+        console.error("Load error");
+      }
+    }
 
-      jobs.forEach(job => {
-        const st = (job.Status || "Urgent").toLowerCase();
-        // Use the numeric rawId we created in the .gs file
-        const uid = job.rawId; 
-        
+    function filterTeam(team) {
+      currentFilter = team;
+      document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn-' + team).classList.add('active');
+      document.getElementById('current-team-label').innerText = team;
+      render();
+    }
+
+    function render() {
+      let html = "";
+      const filtered = currentFilter === 'ALL' ? allData : allData.filter(j => j.team == currentFilter);
+
+      filtered.forEach(job => {
+        const st = (job.status || "Urgent").toLowerCase();
         let btn = "";
-        if (st === "urgent") btn = `<button class="btn" onclick="update('${uid}', 'laser')">→ Laser</button>`;
-        else if (st === "laser") btn = `<button class="btn" onclick="update('${uid}', 'packing')">→ Packing</button>`;
-        else if (st === "packing") btn = `<button class="btn" onclick="update('${uid}', 'packed')">→ Packed</button>`;
-        else btn = "✅ Done";
+        if (st === "urgent") btn = `<button class="btn-action" onclick="update('${job.rawId}', 'laser')">TO LASER</button>`;
+        else if (st === "laser") btn = `<button class="btn-action" onclick="update('${job.rawId}', 'packing')">TO PACKING</button>`;
+        else if (st === "packing") btn = `<button class="btn-action" onclick="update('${job.rawId}', 'packed')">DONE</button>`;
+        else btn = "✅";
 
         html += `<tr>
-          <td style="color:#666; font-size:12px">${job.displayDate || ''}</td>
-          <td>${job['P/I No.'] || ''}</td>
-          <td style="color:#60a5fa; font-weight:bold">${job['PARTS No.'] || ''}</td>
-          <td>${job["Q'TY"] || ''}</td>
-          <td>${job.Team || ''}</td>
+          <td>${job.pi}<br><small style="color:#555">${job.displayDate}</small></td>
+          <td style="color:#60a5fa"><b>${job.parts}</b><br><small>${job.customer}</small></td>
+          <td style="text-align:center">${job.qty}</td>
           <td><span class="status-tag ${st}">${st}</span></td>
           <td>${btn}</td>
         </tr>`;
       });
-      document.getElementById("table-body").innerHTML = html;
+      document.getElementById("table-body").innerHTML = html || "<tr><td colspan='5' style='text-align:center'>No jobs for this team</td></tr>";
     }
 
     async function update(id, nextStatus) {
       if (!confirm("Move to " + nextStatus + "?")) return;
-      // Force a simple GET request for the update to avoid CORS issues
-      const updateUrl = `${URL}?action=update&id=${id}&status=${nextStatus}`;
-      
       try {
-        const res = await fetch(updateUrl);
-        const result = await res.json();
-        if(result.status === "success") {
-          alert("Updated!");
-          load();
-        } else {
-          alert("Error: " + result.error);
-        }
+        await fetch(`${URL}?action=update&id=${id}&status=${nextStatus}`);
+        alert("Success");
+        load();
       } catch (e) {
-        // If it fails due to redirect, wait 1 sec and reload
         setTimeout(load, 1000);
       }
     }
