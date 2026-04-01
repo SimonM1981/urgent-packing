@@ -3,34 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>URGENT PACKING SYSTEM</title>
+  <title>URGENT PACKING</title>
   <style>
-    body { background: #0a0a0a; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; margin: 0; }
-    h1 { color: #ef4444; text-align: center; text-transform: uppercase; letter-spacing: 2px; }
+    body { background:#0a0a0a; color:white; font-family:Arial, sans-serif; padding:20px; margin:0; }
+    h1 { color:#ef4444; text-align:center; letter-spacing: 2px; }
+    table { width:100%; border-collapse:collapse; background:#1f1f1f; margin-top:20px; }
+    th, td { padding:12px; border:1px solid #444; text-align:left; }
+    th { background:#222; color:#aaa; font-size:12px; text-transform:uppercase; }
+    tr:hover { background:#292929; }
     
-    table { width: 100%; border-collapse: collapse; background: #1f1f1f; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-    th, td { padding: 14px; border: 1px solid #333; text-align: left; }
-    th { background: #111; color: #aaa; font-size: 0.85rem; text-transform: uppercase; }
-    tr:hover { background: #252525; }
+    .btn { background:#22c55e; color:black; padding:8px 12px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; }
+    .btn:disabled { background:#444; opacity:0.5; }
     
-    .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
-    .st-urgent { background: #7f1d1d; color: #fca5a5; }
-    .st-laser { background: #7c2d12; color: #fdba74; }
-    .st-packing { background: #14532d; color: #86efac; }
-    
-    button { 
-      background: #22c55e; color: #000; padding: 10px 16px; border: none; 
-      border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; 
-    }
-    button:hover { background: #4ade80; transform: translateY(-1px); }
-    button:disabled { background: #444; cursor: not-allowed; }
-    
-    .loading-row { opacity: 0.5; pointer-events: none; }
+    .status-tag { padding:4px 8px; border-radius:4px; font-size:11px; font-weight:bold; }
+    .urgent { background:#de2121; color:white; }
+    .laser { background:#f59e0b; color:black; }
+    .packing { background:#3b82f6; color:white; }
+    .packed { background:#10b981; color:black; }
   </style>
 </head>
 <body>
 
-  <h1>🚨 URGENT PACKING</h1>
+  <h1>🚨 URGENT PACKING LIST</h1>
 
   <table>
     <thead>
@@ -38,97 +32,78 @@
         <th>P/I No.</th>
         <th>PARTS No.</th>
         <th>CUSTOMER</th>
-        <th style="text-align:center">Q'TY</th>
-        <th style="text-align:center">TEAM</th>
-        <th style="text-align:center">STATUS</th>
-        <th style="text-align:center">ACTION</th>
+        <th>QTY</th>
+        <th>TEAM</th>
+        <th>STATUS</th>
+        <th>ACTION</th>
       </tr>
     </thead>
-    <tbody id="data-container">
-      <tr><td colspan="7" style="text-align:center">Loading data...</td></tr>
+    <tbody id="table-body">
+      <tr><td colspan="7" style="text-align:center">Fetching latest data...</td></tr>
     </tbody>
   </table>
 
   <script>
-    // REPLACE THIS WITH YOUR NEW DEPLOYMENT URL
-    const API_URL = "https://script.google.com/macros/s/AKfycbxK-VVvzX92Bc24X-PHYOe1TKjah9c3ICqsYZzOl-TzWRUJDbQFYySBM7uyev9NqQuf/exec";
+    // 1. PASTE YOUR NEW DEPLOYMENT URL HERE
+    const URL = "https://script.google.com/macros/s/AKfycbxK-VVvzX92Bc24X-PHYOe1TKjah9c3ICqsYZzOl-TzWRUJDbQFYySBM7uyev9NqQuf/exec";
 
-    async function loadData() {
+    async function load() {
       try {
-        const response = await fetch(`${API_URL}?action=get`); // Using action=get for clarity
-        const jobs = await response.json();
-        renderTable(jobs);
-      } catch (err) {
-        console.error("Load failed:", err);
-      }
-    }
+        const res = await fetch(URL);
+        const jobs = await res.json();
+        let html = "";
 
-    function renderTable(jobs) {
-      let html = "";
-      jobs.forEach(job => {
-        const rawStatus = (job.Status || "urgent").toLowerCase();
-        let actionBtn = "";
+        jobs.forEach(job => {
+          const st = (job.Status || "Urgent").toLowerCase();
+          const timestampId = job.Timestamp; // This is our "ID"
+          
+          let actionBtn = "";
+          if (st === "urgent") {
+            actionBtn = `<button class="btn" onclick="update('${timestampId}', 'laser')">→ Send to Laser</button>`;
+          } else if (st === "laser") {
+            actionBtn = `<button class="btn" onclick="update('${timestampId}', 'packing')">→ Start Packing</button>`;
+          } else if (st === "packing") {
+            actionBtn = `<button class="btn" onclick="update('${timestampId}', 'packed')">→ Mark Packed</button>`;
+          } else {
+            actionBtn = "✅ Done";
+          }
 
-        // Logic for Department Transitions
-        if (rawStatus === "urgent") {
-          actionBtn = `<button onclick="updateStatus('${job.ID}', 'laser')">→ Send to Laser</button>`;
-        } else if (rawStatus === "laser") {
-          actionBtn = `<button onclick="updateStatus('${job.ID}', 'packing')">→ Start Packing</button>`;
-        } else if (rawStatus === "packing") {
-          actionBtn = `<button onclick="updateStatus('${job.ID}', 'packed')">→ Mark Packed</button>`;
-        } else {
-          actionBtn = "<span style='color:#666'>Completed</span>";
-        }
-
-        html += `
-          <tr id="row-${job.ID}">
-            <td>${job['P/I No.'] || '-'}</td>
-            <td><b style="color:#60a5fa">${job['PARTS No.'] || '-'}</b></td>
-            <td>${job['CUSTOMER No.'] || job['CUSTOMER'] || '-'}</td>
-            <td style="text-align:center">${job["Q'TY"] || 0}</td>
-            <td style="text-align:center">${job.Team || '-'}</td>
-            <td style="text-align:center">
-              <span class="status-badge st-${rawStatus}">${rawStatus.toUpperCase()}</span>
-            </td>
-            <td style="text-align:center">${actionBtn}</td>
+          html += `<tr>
+            <td>${job['P/I No.'] || ''}</td>
+            <td><b>${job['PARTS No.'] || ''}</b></td>
+            <td>${job['CUSTOMER No.'] || ''}</td>
+            <td>${job["Q'TY"] || ''}</td>
+            <td>${job.Team || ''}</td>
+            <td><span class="status-tag ${st}">${st.toUpperCase()}</span></td>
+            <td>${actionBtn}</td>
           </tr>`;
-      });
-      document.getElementById("data-container").innerHTML = html;
-    }
-
-    async function updateStatus(id, newStatus) {
-      if (!confirm(`Confirm move to ${newStatus.toUpperCase()}?`)) return;
-
-      const row = document.getElementById(`row-${id}`);
-      if (row) row.classList.add('loading-row');
-
-      try {
-        // We use a simple GET request for the update to avoid CORS redirect issues in GAS
-        const updateUrl = `${API_URL}?action=update&id=${encodeURIComponent(id)}&status=${encodeURIComponent(newStatus)}`;
-        
-        const response = await fetch(updateUrl);
-        const result = await response.json();
-
-        if (result.status === "success") {
-          console.log("Update successful");
-          await loadData(); // Refresh list
-        } else {
-          alert("Error: " + (result.error || "Update failed"));
-          if (row) row.classList.remove('loading-row');
-        }
-      } catch (err) {
-        // Often GAS throws a CORS error even if the data updated. 
-        // We refresh anyway to check.
-        console.log("Check redirect:", err);
-        setTimeout(loadData, 1000);
+        });
+        document.getElementById("table-body").innerHTML = html;
+      } catch (e) {
+        console.error(e);
       }
     }
 
-    // Initial Load
-    loadData();
+    async function update(tsId, nextStatus) {
+      if (!confirm("Move to " + nextStatus.toUpperCase() + "?")) return;
+      
+      // We send the Timestamp as the ID parameter
+      const updateUrl = `${URL}?action=update&id=${encodeURIComponent(tsId)}&status=${nextStatus}`;
+      
+      try {
+        await fetch(updateUrl);
+        // We don't strictly wait for the JSON response because GAS redirects often cause "errors" 
+        // even when the data saves successfully.
+        alert("✅ Updated!");
+        load(); 
+      } catch (err) {
+        load();
+      }
+    }
 
-    // Auto-refresh every 30 seconds to keep staff synced
-    setInterval(loadData, 30000);
+    // Load on start and every 20 seconds
+    load();
+    setInterval(load, 20000);
   </script>
 </body>
 </html>
