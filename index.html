@@ -137,9 +137,9 @@
     </table>
   </div>
 
-  <!-- Pending Section (All Days) -->
+  <!-- Pending Section (Only Urgent Status - All Days) -->
   <div id="pending-section" style="display:none;">
-    <div class="section-title">⏳ PENDING (All Days) - Urgent + Laser + Packing</div>
+    <div class="section-title">⏳ PENDING URGENT (All Days) - Only Urgent Status</div>
     <table>
       <thead>
         <tr>
@@ -216,7 +216,6 @@
         document.getElementById('pending-section').style.display = 'block';
       }
       
-      // Re-activate team button
       document.getElementById('btn-' + currentTeam).classList.add('active');
       render();
     }
@@ -225,7 +224,7 @@
       const selectedDate = document.getElementById('dateFilter').value;
       document.getElementById('selected-date-display').innerText = selectedDate || '—';
 
-      // === DAILY VIEW ===
+      // === DAILY VIEW (unchanged - shows all statuses) ===
       if (currentView === 'daily') {
         const filtered = allData.filter(j => 
           (currentTeam === 'ALL' || j.team == currentTeam) && 
@@ -257,26 +256,23 @@
         document.getElementById("daily-body").innerHTML = html;
       }
 
-      // === PENDING VIEW (All Days) ===
+      // === PENDING VIEW - ONLY URGENT STATUS (All Days) ===
       else {
-        const pendingStatuses = ['urgent', 'laser', 'packing'];
-        
         const pendingJobs = allData.filter(j => 
           (currentTeam === 'ALL' || j.team == currentTeam) &&
-          pendingStatuses.includes((j.status || "urgent").toLowerCase())
+          (j.status || "Urgent").toLowerCase() === 'urgent'
         );
 
         let html = "";
         if (pendingJobs.length === 0) {
-          html = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#444;">No pending jobs.</td></tr>`;
+          html = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#444;">No Urgent jobs pending.</td></tr>`;
         } else {
           // Sort by date (newest first)
           pendingJobs.sort((a, b) => b.displayDate.localeCompare(a.displayDate));
 
           pendingJobs.forEach(job => {
             const st = (job.status || "Urgent").toLowerCase();
-            let btn = (st === "packed") ? "✅" : 
-                      `<button class="btn-action" onclick="update('${job.rawId}', '${getNextStatus(st)}')">NEXT</button>`;
+            let btn = `<button class="btn-action" onclick="update('${job.rawId}', 'laser')">NEXT → LASER</button>`;
 
             html += `<tr>
               <td>${job.pi}</td>
@@ -287,7 +283,7 @@
               </td>
               <td style="text-align:center; font-weight:bold; color:#fbbf24">${job.team}</td>
               <td style="text-align:center">${job.displayDate}</td>
-              <td><span class="status-tag ${st}">${st}</span></td>
+              <td><span class="status-tag urgent">URGENT</span></td>
               <td>${btn}</td>
             </tr>`;
           });
@@ -307,7 +303,7 @@
       if (!confirm("Move to " + nextStatus.toUpperCase() + "?")) return;
       try {
         await fetch(`${URL}?action=update&id=${id}&status=${nextStatus}`);
-        load();  // Refresh all data
+        load();  
       } catch (e) { 
         console.error(e);
         load();
@@ -316,7 +312,7 @@
 
     // Initialize
     load();
-    setInterval(load, 30000);   // Auto refresh every 30 seconds
+    setInterval(load, 30000);
   </script>
 </body>
 </html>
