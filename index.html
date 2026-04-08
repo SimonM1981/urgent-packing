@@ -29,7 +29,7 @@
       border-radius: 5px; 
       font-size: 16px; 
     }
-   
+    
     .nav { 
       position: fixed; 
       bottom: 0; 
@@ -108,10 +108,9 @@
       text-transform:uppercase; 
       margin-bottom:4px; 
     }
+    /* Updated Styles for Confirm/Confirmed */
     .urgent { background:#7f1d1d; color:#fca5a5; } 
-    .laser { background:#92400e; color:#fcd34d; }
-    .packing { background:#1e40af; color:#bfdbfe; } 
-    .packed { background:#065f46; color:#a7f3d0; }
+    .confirmed { background:#065f46; color:#a7f3d0; }
   </style>
 </head>
 <body>
@@ -120,7 +119,6 @@
     <p style="margin: 8px 0 0 0; font-size: 13px;">TEAM: <span id="current-team-label" style="color:#22c55e; font-weight:bold;">ALL</span></p>
   </div>
 
-  <!-- Daily View -->
   <div id="daily-section">
     <div class="section-title">📅 DAILY VIEW - <span id="selected-date-display"></span></div>
     <table>
@@ -137,9 +135,8 @@
     </table>
   </div>
 
-  <!-- Pending Section (Only Urgent Status - All Days) -->
   <div id="pending-section" style="display:none;">
-    <div class="section-title">⏳ PENDING URGENT (All Days) - Only Urgent Status</div>
+    <div class="section-title">⏳ PENDING URGENT (All Days)</div>
     <table>
       <thead>
         <tr>
@@ -173,7 +170,7 @@
     const URL = "https://script.google.com/macros/s/AKfycbzLICg8R6pwS62NkB5Nr4WSnxzatNpbDZTnnPR4FTulzqHia0QzKpS0WYgkCukBmaSw/exec";
     let allData = [];
     let currentTeam = 'ALL';
-    let currentView = 'daily';   // 'daily' or 'pending'
+    let currentView = 'daily';
 
     document.getElementById('dateFilter').valueAsDate = new Date();
 
@@ -224,7 +221,7 @@
       const selectedDate = document.getElementById('dateFilter').value;
       document.getElementById('selected-date-display').innerText = selectedDate || '—';
 
-      // === DAILY VIEW (unchanged - shows all statuses) ===
+      // === DAILY VIEW ===
       if (currentView === 'daily') {
         const filtered = allData.filter(j => 
           (currentTeam === 'ALL' || j.team == currentTeam) && 
@@ -237,8 +234,9 @@
         } else {
           filtered.forEach(job => {
             const st = (job.status || "Urgent").toLowerCase();
-            let btn = (st === "packed") ? "✅" : 
-                      `<button class="btn-action" onclick="update('${job.rawId}', '${getNextStatus(st)}')">NEXT</button>`;
+            // Modified Logic: If confirmed, show green tag. If urgent, show Confirm button.
+            let btn = (st === "confirmed") ? "✅" : 
+                      `<button class="btn-action" onclick="update('${job.rawId}', 'confirmed')">CONFIRM</button>`;
 
             html += `<tr>
               <td>${job.pi}</td>
@@ -256,23 +254,21 @@
         document.getElementById("daily-body").innerHTML = html;
       }
 
-      // === PENDING VIEW - ONLY URGENT STATUS (All Days) ===
+      // === PENDING VIEW - Only shows if status is NOT confirmed ===
       else {
         const pendingJobs = allData.filter(j => 
           (currentTeam === 'ALL' || j.team == currentTeam) &&
-          (j.status || "Urgent").toLowerCase() === 'urgent'
+          (j.status || "Urgent").toLowerCase() !== 'confirmed'
         );
 
         let html = "";
         if (pendingJobs.length === 0) {
-          html = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#444;">No Urgent jobs pending.</td></tr>`;
+          html = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#444;">No Pending items.</td></tr>`;
         } else {
-          // Sort by date (newest first)
           pendingJobs.sort((a, b) => b.displayDate.localeCompare(a.displayDate));
 
           pendingJobs.forEach(job => {
-            const st = (job.status || "Urgent").toLowerCase();
-            let btn = `<button class="btn-action" onclick="update('${job.rawId}', 'laser')">NEXT → LASER</button>`;
+            let btn = `<button class="btn-action" onclick="update('${job.rawId}', 'confirmed')">CONFIRM</button>`;
 
             html += `<tr>
               <td>${job.pi}</td>
@@ -292,15 +288,8 @@
       }
     }
 
-    function getNextStatus(current) {
-      if (current === 'urgent') return 'laser';
-      if (current === 'laser') return 'packing';
-      if (current === 'packing') return 'packed';
-      return 'packed';
-    }
-
     async function update(id, nextStatus) {
-      if (!confirm("Move to " + nextStatus.toUpperCase() + "?")) return;
+      if (!confirm("Change status to " + nextStatus.toUpperCase() + "?")) return;
       try {
         await fetch(`${URL}?action=update&id=${id}&status=${nextStatus}`);
         load();  
