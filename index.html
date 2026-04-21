@@ -29,7 +29,6 @@
       border-radius: 5px; 
       font-size: 16px; 
     }
-    
     .nav { 
       position: fixed; 
       bottom: 0; 
@@ -57,7 +56,6 @@
       border-bottom: 3px solid #22c55e; 
       background: #1a1a1a; 
     }
-
     table { 
       width:100%; 
       border-collapse:collapse; 
@@ -76,7 +74,6 @@
       text-transform:uppercase; 
       font-size:9px; 
     }
-
     .section-title {
       background: #1a1a1a;
       padding: 10px;
@@ -86,7 +83,6 @@
       color: #22c55e;
       font-size: 14px;
     }
-
     .btn-action { 
       background:#22c55e; 
       color:black; 
@@ -108,7 +104,6 @@
       text-transform:uppercase; 
       margin-bottom:4px; 
     }
-    /* Updated Styles for Confirm/Confirmed */
     .urgent { background:#7f1d1d; color:#fca5a5; } 
     .confirmed { background:#065f46; color:#a7f3d0; }
   </style>
@@ -174,6 +169,25 @@
 
     document.getElementById('dateFilter').valueAsDate = new Date();
 
+    // Format yyyy-MM-dd or ISO string → DD/MM/YY for display
+    function fmtDate(d) {
+      if (!d) return "—";
+      // Handle ISO string: 2026-08-03T17:00:00.000Z
+      if (String(d).includes("T")) {
+        const dt = new Date(d);
+        const day = String(dt.getUTCDate()).padStart(2,"0");
+        const mon = String(dt.getUTCMonth()+1).padStart(2,"0");
+        const yr  = String(dt.getUTCFullYear()).slice(2);
+        return `${day}/${mon}/${yr}`;
+      }
+      // Handle yyyy-MM-dd
+      if (String(d).includes("-") && String(d).length === 10) {
+        const [y, m, day] = d.split("-");
+        return `${day}/${m}/${y.slice(2)}`;
+      }
+      return d; // already DD/MM/YY or unknown
+    }
+
     async function load() {
       try {
         const res = await fetch(URL);
@@ -187,13 +201,11 @@
     function filterTeam(team) {
       currentTeam = team;
       document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
-      
       if (currentView === 'daily') {
         document.getElementById('btn-daily').classList.add('active');
       } else {
         document.getElementById('btn-pending').classList.add('active');
       }
-      
       document.getElementById('btn-' + team).classList.add('active');
       document.getElementById('current-team-label').innerText = team;
       render();
@@ -202,7 +214,6 @@
     function switchView(view) {
       currentView = view;
       document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
-      
       if (view === 'daily') {
         document.getElementById('btn-daily').classList.add('active');
         document.getElementById('daily-section').style.display = 'block';
@@ -212,14 +223,13 @@
         document.getElementById('daily-section').style.display = 'none';
         document.getElementById('pending-section').style.display = 'block';
       }
-      
       document.getElementById('btn-' + currentTeam).classList.add('active');
       render();
     }
 
     function render() {
       const selectedDate = document.getElementById('dateFilter').value;
-      document.getElementById('selected-date-display').innerText = selectedDate || '—';
+      document.getElementById('selected-date-display').innerText = fmtDate(selectedDate) || '—';
 
       // === DAILY VIEW ===
       if (currentView === 'daily') {
@@ -234,16 +244,15 @@
         } else {
           filtered.forEach(job => {
             const st = (job.status || "Urgent").toLowerCase();
-            // Modified Logic: If confirmed, show green tag. If urgent, show Confirm button.
             let btn = (st === "confirmed") ? "✅" : 
                       `<button class="btn-action" onclick="update('${job.rawId}', 'confirmed')">CONFIRM</button>`;
 
             html += `<tr>
               <td>${job.pi}</td>
               <td>
-                  <b style="color:#60a5fa">${job.parts}</b><br>
-                  <span style="color:#fff; font-weight:bold;">QTY: ${job.qty}</span><br>
-                  <span style="color:#888; font-size:10px">${job.customer}</span>
+                <b style="color:#60a5fa">${job.parts}</b><br>
+                <span style="color:#fff; font-weight:bold;">QTY: ${job.qty}</span><br>
+                <span style="color:#888; font-size:10px">${job.customer}</span>
               </td>
               <td style="text-align:center; font-weight:bold; color:#fbbf24">${job.team}</td>
               <td><span class="status-tag ${st}">${st}</span></td>
@@ -254,7 +263,7 @@
         document.getElementById("daily-body").innerHTML = html;
       }
 
-      // === PENDING VIEW - Only shows if status is NOT confirmed ===
+      // === PENDING VIEW ===
       else {
         const pendingJobs = allData.filter(j => 
           (currentTeam === 'ALL' || j.team == currentTeam) &&
@@ -273,12 +282,12 @@
             html += `<tr>
               <td>${job.pi}</td>
               <td>
-                  <b style="color:#60a5fa">${job.parts}</b><br>
-                  <span style="color:#fff; font-weight:bold;">QTY: ${job.qty}</span><br>
-                  <span style="color:#888; font-size:10px">${job.customer}</span>
+                <b style="color:#60a5fa">${job.parts}</b><br>
+                <span style="color:#fff; font-weight:bold;">QTY: ${job.qty}</span><br>
+                <span style="color:#888; font-size:10px">${job.customer}</span>
               </td>
               <td style="text-align:center; font-weight:bold; color:#fbbf24">${job.team}</td>
-              <td style="text-align:center">${job.displayDate}</td>
+              <td style="text-align:center">${fmtDate(job.displayDate)}</td>
               <td><span class="status-tag urgent">URGENT</span></td>
               <td>${btn}</td>
             </tr>`;
@@ -299,7 +308,6 @@
       }
     }
 
-    // Initialize
     load();
     setInterval(load, 30000);
   </script>
